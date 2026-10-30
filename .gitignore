@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# User knowledge data
+knowledge/
+
+# Databases
+*.db
+*.db-*
+*.bak
+
+# Notebooks
+notebooks/
+.ipynb_checkpoints/
+
+# Env
+.env
+
+# OS
+.DS_Store

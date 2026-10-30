@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search My Markdown</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    code, pre {
+      font-family: 'Google Sans Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+    .md-content > *:first-child { margin-top: 0 !important; }
+    .md-content > *:last-child { margin-bottom: 0 !important; }
+    .md-content p { margin: 0.5rem 0; }
+    .md-content h1, .md-content h2, .md-content h3, .md-content h4 {
+      color: #000;
+      font-weight: 500;
+      font-size: 0.875rem;
+      margin: 0.75rem 0 0.25rem 0;
+    }
+    .md-content :not(pre) > code {
+      background: #f5f5f5;
+      color: #000;
+      padding: 0.125rem 0.35rem;
+      border-radius: 0.25rem;
+      font-size: 0.8125em;
+    }
+    .md-content pre {
+      background: #f5f5f5;
+      color: #000;
+      padding: 0.875rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      margin: 0.75rem 0;
+    }
+    .md-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0;
+      font-size: 0.8125rem;
+    }
+    .md-content th {
+      text-align: left;
+      font-weight: 500;
+      color: #000;
+      padding: 0.375rem 0.75rem 0.375rem 0;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .md-content td {
+      padding: 0.375rem 0.75rem 0.375rem 0;
+      border-bottom: 1px solid #f5f5f5;
+      vertical-align: top;
+    }
+    .md-content ul {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      margin: 0.5rem 0;
+    }
+    .md-content ol {
+      list-style-type: decimal;
+      padding-left: 1.25rem;
+      margin: 0.5rem 0;
+    }
+    .md-content li { margin: 0.2rem 0; }
+    .md-content blockquote {
+      border-left: 2px solid #e5e5e5;
+      padding-left: 0.75rem;
+      color: #737373;
+      margin: 0.5rem 0;
+    }
+    .md-content strong {
+      font-weight: 600;
+      color: #000;
+    }
+    .md-content a {
+      color: #000;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .md-article p { margin: 0.875rem 0; line-height: 1.75; }
+    .md-article h1 { font-size: 1.375rem; font-weight: 600; margin: 2rem 0 0.75rem 0; }
+    .md-article h2 { font-size: 1.15rem; font-weight: 600; margin: 1.75rem 0 0.5rem 0; }
+    .md-article h3 { font-size: 1rem; font-weight: 500; margin: 1.25rem 0 0.375rem 0; }
+    .md-article pre { margin: 1rem 0; }
+    .md-article table { margin: 1rem 0; }
+  </style>
+</head>
+<body class="bg-white text-black h-screen flex antialiased selection:bg-black selection:text-white">
+
+  <!-- Left Sidebar -->
+  <aside class="w-72 shrink-0 px-6 py-7 flex flex-col justify-between h-screen border-r border-neutral-100 bg-neutral-50/40">
+    <div class="flex flex-col min-h-0 flex-1 space-y-6">
+      <!-- Brand -->
+      <button onclick="closeReader()" class="text-lg font-semibold tracking-tight text-left hover:opacity-75 transition shrink-0">
+        Search My Markdown<span class="text-orange-500">.</span>
+      </button>
+
+      <!-- Unified Hierarchy: All -> Collection -> Documents -->
+      <div class="flex flex-col min-h-0 flex-1 space-y-2">
+        <div class="text-xs font-medium uppercase tracking-wider text-neutral-400 shrink-0">Library</div>
+        <nav id="library-tree" class="space-y-1.5 text-sm overflow-y-auto pr-1 flex-1"></nav>
+      </div>
+
+      <!-- Actions: + New Collection & + Add URL -->
+      <div class="space-y-2 pt-3 border-t border-neutral-200/70 shrink-0">
+        <!-- "+ New Collection" Trigger & Inline Form -->
+        <div>
+          <button
+            id="new-col-btn"
+            onclick="toggleNewCollection(true)"
+            class="text-xs py-1 text-neutral-500 hover:text-orange-600 transition block text-left"
+          >
+            + New collection
+          </button>
+
+          <form
+            id="new-col-form"
+            onsubmit="handleCreateCollection(event)"
+            class="hidden pt-1.5 pb-2 space-y-2 text-xs"
+          >
+            <input
+              id="col-name"
+              type="text"
+              required
+              placeholder="Name (e.g. rust)"
+              class="w-full py-1 bg-transparent border-b border-neutral-200 text-black placeholder-neutral-400 focus:border-orange-500 focus:outline-none"
+            />
+            <input
+              id="col-path"
+              type="text"
+              required
+              placeholder="Path (e.g. ./knowledge/rust)"
+              class="w-full py-1 bg-transparent border-b border-neutral-200 text-black placeholder-neutral-400 focus:border-orange-500 focus:outline-none"
+            />
+            <input
+              id="col-desc"
+              type="text"
+              placeholder="Description (optional)"
+              class="w-full py-1 bg-transparent border-b border-neutral-200 text-black placeholder-neutral-400 focus:border-orange-500 focus:outline-none"
+            />
+            <div class="flex items-center gap-3 pt-1">
+              <button type="submit" class="font-medium text-orange-600 hover:underline">Create</button>
+              <button type="button" onclick="toggleNewCollection(false)" class="text-neutral-400 hover:text-black">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- "+ Add URL" Trigger & Inline Form -->
+        <div>
+          <button
+            id="new-doc-btn"
+            onclick="toggleNewDoc(true)"
+            class="text-xs py-1 text-neutral-500 hover:text-orange-600 transition block text-left"
+          >
+            + Add URL
+          </button>
+
+          <form
+            id="new-doc-form"
+            onsubmit="handleAddDocument(event)"
+            class="hidden pt-1.5 pb-2 space-y-2 text-xs"
+          >
+            <input
+              id="doc-url"
+              type="url"
+              required
+              placeholder="https://..."
+              class="w-full py-1 bg-transparent border-b border-neutral-200 text-black placeholder-neutral-400 focus:border-orange-500 focus:outline-none"
+            />
+            <select
+              id="doc-collection"
+              class="w-full py-1 bg-transparent text-neutral-600 focus:outline-none"
+            ></select>
+            <div class="flex items-center gap-3 pt-1">
+              <button type="submit" class="font-medium text-orange-600 hover:underline">Add</button>
+              <button type="button" onclick="toggleNewDoc(false)" class="text-neutral-400 hover:text-black">Cancel</button>
+            </div>
+          </form>
+          <div id="doc-feedback" class="hidden text-xs text-orange-600"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sync Footer -->
+    <div class="pt-4 mt-4 border-t border-neutral-200/70 space-y-1 shrink-0">
+      <button
+        onclick="handleSync()"
+        id="sync-btn"
+        class="text-sm text-neutral-500 hover:text-black transition flex items-center gap-2"
+      >
+        <span id="sync-dot" class="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
+        <span id="sync-label">Sync</span>
+      </button>
+      <div id="sync-status" class="text-xs text-neutral-400">Up to date</div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main id="main-scroll" class="flex-1 px-12 py-8 max-w-4xl overflow-auto">
+    <!-- Search View -->
+    <div id="search-view">
+      <!-- Search Input -->
+      <div class="mb-10 border-b border-neutral-100 focus-within:border-orange-400 transition-colors pb-1">
+        <input
+          id="search-input"
+          type="text"
+          value=""
+          placeholder="Search..."
+          autofocus
+          oninput="onSearchInput()"
+          class="w-full py-2 text-2xl font-normal bg-transparent text-black placeholder-neutral-300 focus:outline-none"
+        />
+      </div>
+
+      <!-- Search Results / Browse Documents -->
+      <div id="results-container" class="space-y-4"></div>
+    </div>
+
+    <!-- Article Reader View -->
+    <div id="reader-view" class="hidden pb-16">
+      <div class="flex items-center justify-between mb-8">
+        <button
+          onclick="closeReader()"
+          class="text-sm text-neutral-400 hover:text-orange-600 transition flex items-center gap-1.5"
+        >
+          <span>&larr;</span>
+          <span>Back</span>
+        </button>
+        <div id="reader-meta" class="text-xs text-neutral-400 flex items-center gap-3"></div>
+      </div>
+
+      <h1 id="reader-title" class="text-2xl font-semibold text-black leading-snug mb-8"></h1>
+      <div id="reader-content" class="text-sm text-neutral-700 md-content md-article"></div>
+    </div>
+  </main>
+
+  <script>
+    let collections = [];
+    let documents = [];
+    let activeCollection = "all";
+    let activeDocPath = null;
+    let currentHits = [];
+    let searchTimer = null;
+    let searchAbort = null;
+    let savedScrollTop = 0;
+
+    async function loadCollections() {
+      const res = await fetch("/api/collections");
+      collections = await res.json();
+      renderLibraryTree();
+    }
+
+    async function loadDocuments() {
+      const res = await fetch("/api/documents");
+      documents = await res.json();
+      renderLibraryTree();
+      if (!document.getElementById("search-input").value.trim()) {
+        renderDocumentCards();
+      }
+    }
+
+    function renderLibraryTree() {
+      const tree = document.getElementById("library-tree");
+      if (!tree) return;
+
+      // Preserve which <details> are currently open before re-rendering
+      const openCols = new Set(
+        Array.from(tree.querySelectorAll("details[open]")).map(d => d.dataset.col)
+      );
+
+      const allNode = `
+        <button
+          id="tree-all-btn"
+          onclick="selectCollection('all')"
+          class="w-full text-left py-1.5 px-2 rounded-md flex items-center justify-between transition"
+        >
+          <span class="flex items-center gap-2">
+            <span id="tree-all-dot" class="w-1.5 h-1.5 rounded-full"></span>
+            <span>All</span>
+          </span>
+          <span class="text-[11px] text-neutral-400">${documents.length}</span>
+        </button>
+      `;
+
+      const collectionNodes = collections.map(col => {
+        const colDocs = documents.filter(d => d.collection === col.name);
+        const isOpen = openCols.has(col.name) || activeCollection === col.name;
+
+        return `
+          <details data-col="${col.name}" ${isOpen ? "open" : ""} class="group">
+            <summary
+              onclick="selectCollection('${col.name}')"
+              data-col-summary="${col.name}"
+              class="py-1 px-2 rounded-md flex items-center justify-between cursor-pointer list-none select-none transition"
+            >
+              <span class="flex items-center gap-1.5 min-w-0">
+                <span class="text-[10px] text-neutral-400 transition-transform group-open:rotate-90">&#9656;</span>
+                <span class="truncate">${col.name}</span>
+              </span>
+              <span class="text-[11px] text-neutral-400 shrink-0">${colDocs.length}</span>
+            </summary>
+            <div class="pl-3 ml-2.5 border-l border-neutral-200/80 mt-0.5 mb-1 space-y-0.5">
+              ${colDocs.map(doc => {
+                const docIdx = documents.indexOf(doc);
+                return `
+                  <button
+                    onclick="openDocByIndex(${docIdx})"
+                    data-doc-path="${doc.path.replace(/"/g, '&quot;')}"
+                    title="${doc.title.replace(/"/g, '&quot;')}"
+                    class="w-full text-left py-1 px-2 rounded text-xs truncate block transition"
+                  >
+                    ${doc.title}
+                  </button>
+                `;
+              }).join("")}
+            </div>
+          </details>
+        `;
+      }).join("");
+
+      tree.innerHTML = allNode + `<div class="pl-2 space-y-0.5">${collectionNodes}</div>`;
+      updateTreeActiveState();
+
+      const select = document.getElementById("doc-collection");
+      if (select) {
+        select.innerHTML = collections.map(c =>
+          `<option value="${c.name}" ${c.name === activeCollection ? 'selected' : ''}>in ${c.name}</option>`
+        ).join("");
+      }
+    }
+
+    function updateTreeActiveState() {
+      const allBtn = document.getElementById("tree-all-btn");
+      const allDot = document.getElementById("tree-all-dot");
+      if (allBtn && allDot) {
+        const isAllActive = activeCollection === "all" && !activeDocPath;
+        allBtn.className = `w-full text-left py-1.5 px-2 rounded-md flex items-center justify-between transition ${
+          isAllActive
+            ? "bg-orange-50/80 font-medium text-orange-600"
+            : "text-neutral-700 hover:bg-neutral-100/70 hover:text-black"
+        }`;
+        allDot.className = `w-1.5 h-1.5 rounded-full ${
+          activeCollection === "all" ? "bg-orange-500" : "bg-neutral-300"
+        }`;
+      }
+
+      document.querySelectorAll("[data-col-summary]").forEach(el => {
+        const colName = el.getAttribute("data-col-summary");
+        const isColActive = activeCollection === colName;
+        el.className = `py-1 px-2 rounded-md flex items-center justify-between cursor-pointer list-none select-none transition ${
+          isColActive && !activeDocPath
+            ? "bg-orange-50/80 font-medium text-orange-600"
+            : isColActive
+              ? "font-medium text-orange-600"
+              : "text-neutral-700 hover:bg-neutral-100/70 hover:text-black"
+        }`;
+      });
+
+      document.querySelectorAll("[data-doc-path]").forEach(el => {
+        const isDocActive = el.getAttribute("data-doc-path") === activeDocPath;
+        el.className = `w-full text-left py-1 px-2 rounded text-xs truncate block transition ${
+          isDocActive
+            ? "bg-orange-50 font-medium text-orange-600"
+            : "text-neutral-500 hover:text-black hover:bg-neutral-100/60"
+        }`;
+      });
+    }
+
+    function renderDocumentCards() {
+      const container = document.getElementById("results-container");
+      const filteredDocs = activeCollection === "all"
+        ? documents
+        : documents.filter(d => d.collection === activeCollection);
+
+      if (!filteredDocs.length) {
+        container.innerHTML = `<div class="text-sm text-neutral-400">No indexed documents yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="text-xs text-neutral-400 mb-3">
+          ${activeCollection === "all" ? "All Documents" : activeCollection} (${filteredDocs.length})
+        </div>
+        <div class="divide-y divide-neutral-100">
+          ${filteredDocs.map(doc => {
+            const idx = documents.indexOf(doc);
+            return `
+              <div
+                onclick="openDocByIndex(${idx})"
+                class="py-3.5 first:pt-0 flex items-center justify-between gap-4 cursor-pointer group"
+              >
+                <span class="text-sm font-medium text-neutral-800 group-hover:text-orange-600 transition-colors truncate">
+                  ${doc.title}
+                </span>
+                <span class="text-xs text-neutral-400 shrink-0">${doc.collection}</span>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    async function selectCollection(col) {
+      activeCollection = col;
+      closeReader();
+      updateTreeActiveState();
+      runSearch();
+    }
+
+    function toggleNewCollection(show) {
+      document.getElementById("new-col-btn").classList.toggle("hidden", show);
+      const form = document.getElementById("new-col-form");
+      form.classList.toggle("hidden", !show);
+      if (show) document.getElementById("col-name").focus();
+    }
+
+    async function handleCreateCollection(e) {
+      e.preventDefault();
+      const name = document.getElementById("col-name").value.trim();
+      const path = document.getElementById("col-path").value.trim();
+      const description = document.getElementById("col-desc").value.trim();
+      if (!name || !path) return;
+
+      const res = await fetch("/api/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, path, description })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail || "Failed to create collection");
+        return;
+      }
+
+      activeCollection = name;
+      e.target.reset();
+      toggleNewCollection(false);
+      await loadCollections();
+      await loadDocuments();
+      await loadSyncStatus();
+      runSearch();
+    }
+
+    function toggleNewDoc(show) {
+      document.getElementById("new-doc-btn").classList.toggle("hidden", show);
+      const form = document.getElementById("new-doc-form");
+      form.classList.toggle("hidden", !show);
+      if (show) document.getElementById("doc-url").focus();
+    }
+
+    async function handleAddDocument(e) {
+      e.preventDefault();
+      const url = document.getElementById("doc-url").value.trim();
+      const col = document.getElementById("doc-collection").value;
+      if (!url || !col) return;
+
+      const feedback = document.getElementById("doc-feedback");
+      feedback.textContent = "Extracting...";
+      feedback.classList.remove("hidden");
+
+      e.target.reset();
+      toggleNewDoc(false);
+
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, collection: col })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        feedback.textContent = err.detail || "Failed to add URL";
+      } else {
+        feedback.textContent = `Saved to ${col}`;
+        await loadSyncStatus();
+      }
+      setTimeout(() => feedback.classList.add("hidden"), 3000);
+    }
+
+    async function loadSyncStatus() {
+      const res = await fetch("/api/sync");
+      const data = await res.json();
+      const dot = document.getElementById("sync-dot");
+      const status = document.getElementById("sync-status");
+      const total = data.to_add + data.to_update + data.to_delete;
+
+      if (total === 0) {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-neutral-300";
+        status.textContent = "Up to date";
+      } else {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-orange-500";
+        const parts = [];
+        if (data.to_add) parts.push(`+${data.to_add} new`);
+        if (data.to_update) parts.push(`~${data.to_update} modified`);
+        if (data.to_delete) parts.push(`-${data.to_delete} deleted`);
+        status.textContent = parts.join(", ");
+      }
+    }
+
+    async function handleSync() {
+      const label = document.getElementById("sync-label");
+      const status = document.getElementById("sync-status");
+      const dot = document.getElementById("sync-dot");
+
+      label.textContent = "Syncing...";
+      const res = await fetch("/api/sync", { method: "POST" });
+      if (res.ok) {
+        label.textContent = "Sync";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-neutral-300";
+        status.textContent = "Synced just now";
+        await loadDocuments();
+        runSearch();
+      } else {
+        label.textContent = "Sync";
+        status.textContent = "Sync failed";
+      }
+    }
+
+    function formatSnippet(text, query) {
+      const html = marked.parse(text, { gfm: true, breaks: false });
+
+      const terms = (query.match(/\w+/g) || []).filter(t => t.length > 2);
+      if (!terms.length) return html;
+      const regex = new RegExp(`\\b(${terms.join("|")})\\b`, "gi");
+      return html.replace(/(<pre[\s\S]*?<\/pre>|<code[\s\S]*?<\/code>|<[^>]+>)|([^<]+)/g, (match, protectedBlock, plainText) => {
+        if (protectedBlock) return protectedBlock;
+        return plainText.replace(regex, "<mark class='bg-orange-100/80 text-orange-950 px-1 rounded font-medium'>$1</mark>");
+      });
+    }
+
+    function formatHeadingPath(headingPath, docTitle) {
+      const parts = (headingPath || "")
+        .split(">")
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (parts.length && parts[0].toLowerCase() === (docTitle || "").trim().toLowerCase()) {
+        parts.shift();
+      }
+      return parts.join(" \u203a ");
+    }
+
+    function onSearchInput() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(runSearch, 150);
+    }
+
+    async function runSearch() {
+      const query = document.getElementById("search-input").value.trim();
+      const container = document.getElementById("results-container");
+
+      if (!query) {
+        if (searchAbort) searchAbort.abort();
+        currentHits = [];
+        renderDocumentCards();
+        return;
+      }
+
+      if (searchAbort) searchAbort.abort();
+      searchAbort = new AbortController();
+
+      try {
+        const params = new URLSearchParams({ q: query, k: "10", collection: activeCollection });
+        const res = await fetch(`/api/search?${params}`, { signal: searchAbort.signal });
+        currentHits = await res.json();
+
+        container.innerHTML = currentHits.map((hit, idx) => {
+          const sectionPath = formatHeadingPath(hit.heading_path, hit.doc_title);
+          return `
+            <article onclick="openHit(${idx})" class="group bg-white rounded-xl p-6 hover:border-orange-300 shadow-md transition cursor-pointer">
+              <div class="flex items-center gap-2 text-xs text-neutral-400 mb-2 truncate">
+                <!--<span class="px-2 py-0.5 rounded-md bg-orange-50 text-orange-700 border border-orange-200/60 font-medium shrink-0">${hit.collection}</span>-->
+                
+              </div>
+              <h2 class="text-orange-700 font-semibold text-neutral-900 group-hover:text-orange-600 transition-colors leading-snug">
+                ${hit.doc_title} 
+              </h2>
+              <div class="mt-3.5 group-hover:border-orange-400 transition-colors text-sm leading-relaxed text-neutral-600 md-content">
+                ${formatSnippet(hit.text, query)}
+              </div>
+              ${sectionPath ? `<span class="truncate text-neutral-400 text-xs">${sectionPath}</span>` : ""}
+            </article>
+          `;
+        }).join("");
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error(err);
+        }
+      }
+    }
+
+    function openHit(idx) {
+      const hit = currentHits[idx];
+      if (!hit) return;
+      openDocument(hit.doc_path, hit.heading_path);
+    }
+
+    function openDocByIndex(idx) {
+      const doc = documents[idx];
+      if (!doc) return;
+      openDocument(doc.path, null);
+    }
+
+    async function openDocument(docPath, headingPath) {
+      const mainEl = document.getElementById("main-scroll");
+      if (document.getElementById("reader-view").classList.contains("hidden")) {
+        savedScrollTop = mainEl.scrollTop;
+      }
+
+      const params = new URLSearchParams({ path: docPath });
+      const res = await fetch(`/api/document?${params}`);
+      if (!res.ok) return;
+      const doc = await res.json();
+
+      activeDocPath = doc.path;
+      const colDetails = document.querySelector(`details[data-col="${doc.collection}"]`);
+      if (colDetails) colDetails.open = true;
+      updateTreeActiveState();
+
+      document.getElementById("reader-title").textContent = doc.title;
+
+      const metaParts = [`<span>${doc.collection}</span>`];
+      if (doc.date) metaParts.push(`<span>&middot;</span><span>${doc.date}</span>`);
+      if (doc.url) {
+        metaParts.push(
+          `<span>&middot;</span><a href="${doc.url}" target="_blank" rel="noopener noreferrer" class="hover:text-black underline">Source &nearr;</a>`
+        );
+      }
+      document.getElementById("reader-meta").innerHTML = metaParts.join("");
+
+      const contentEl = document.getElementById("reader-content");
+      contentEl.innerHTML = marked.parse(doc.content, { gfm: true, breaks: false });
+
+      document.getElementById("search-view").classList.add("hidden");
+      document.getElementById("reader-view").classList.remove("hidden");
+      mainEl.scrollTop = 0;
+
+      if (headingPath) {
+        const parts = headingPath.split(">").map(s => s.trim()).filter(Boolean);
+        const targetHeading = parts[parts.length - 1];
+        if (targetHeading && targetHeading !== doc.title) {
+          const headings = contentEl.querySelectorAll("h1, h2, h3, h4, h5, h6");
+          for (const h of headings) {
+            if (h.textContent.trim().toLowerCase() === targetHeading.toLowerCase()) {
+              h.scrollIntoView({ behavior: "smooth", block: "start" });
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    function closeReader() {
+      activeDocPath = null;
+      updateTreeActiveState();
+      const readerView = document.getElementById("reader-view");
+      if (readerView.classList.contains("hidden")) return;
+      readerView.classList.add("hidden");
+      document.getElementById("search-view").classList.remove("hidden");
+      document.getElementById("main-scroll").scrollTop = savedScrollTop;
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeReader();
+    });
+
+    loadCollections();
+    loadDocuments();
+    loadSyncStatus();
+  </script>
+</body>
+</html>
