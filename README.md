@@ -1,5 +1,7 @@
 # Personal Markdown Search engine (PMS)
 
+Link to blog post: **[https://benjaminetienne.com/blog/a-personal-markdown-search-engine/]**
+
 **PMS** is a lightweight, local-first hybrid search engine and web clipper for
 personal Markdown knowledge bases, built in Python on top of **SQLite
 (`FTS5` + `sqlite-vec`)** and **ONNX embeddings (`fastembed`)**.
