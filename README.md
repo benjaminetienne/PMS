@@ -26,7 +26,7 @@ and a small hackable codebase. Everything runs offline on your laptop.
 
 > 📝 For the design decisions and lessons learned (chunking trade-offs, RRF
 > tuning, the time a 17-document index became a 374MB file), see the
-> accompanying blog post: **[link]**.
+> accompanying blog post: **[https://benjaminetienne.com/blog/a-personal-markdown-search-engine/]**.
 
 ## Architecture
 
